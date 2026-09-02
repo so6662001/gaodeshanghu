@@ -245,3 +245,22 @@ def test_stats_overview(client):
     assert body["merchants"] == 4
     assert body["reachable"] == 4
     assert body["reachable_rate"] == 100.0
+
+
+def test_duplicate_unsubscribe_in_same_batch(client):
+    """同一批回调里同号码多条退订：不能报错，且只算一个退订号码。"""
+    seed_merchants(2)
+    body = client.post(
+        "/callback/sms/reply",
+        json=[
+            {"mobile": "13800138000", "msg": "TD"},
+            {"mobile": "13800138000", "msg": "退订"},
+            {"mobile": "13800138001", "msg": "米面油怎么报价"},
+        ],
+    ).json()
+    assert body["handled"] == 3
+    assert body["unsubscribed"] == 1
+    assert client.get("/api/sms/blacklist").json()["total"] == 1
+
+    replies = client.get("/api/sms/replies?intent=interested").json()
+    assert replies["total"] == 1

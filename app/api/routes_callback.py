@@ -94,7 +94,7 @@ async def sms_reply(request: Request, db: Session = Depends(get_db)) -> dict:
     replies = payload if isinstance(payload, list) else payload.get("replies") or [payload]
 
     handled = 0
-    unsubscribed = 0
+    unsubscribed: set[str] = set()
     for item in replies:
         if not isinstance(item, dict):
             continue
@@ -127,7 +127,7 @@ async def sms_reply(request: Request, db: Session = Depends(get_db)) -> dict:
 
         if intent == "unsubscribe":
             add_to_blacklist(db, phone, reason="unsubscribe", source="sms_reply")
-            unsubscribed += 1
+            unsubscribed.add(phone)
         elif intent == "complaint":
             add_to_blacklist(db, phone, reason="complaint", source="sms_reply")
 
@@ -144,8 +144,8 @@ async def sms_reply(request: Request, db: Session = Depends(get_db)) -> dict:
         handled += 1
 
     db.commit()
-    logger.info("处理上行回复 %s 条，其中退订 %s 条", handled, unsubscribed)
-    return {"result": "success", "handled": handled, "unsubscribed": unsubscribed}
+    logger.info("处理上行回复 %s 条，退订号码 %s 个", handled, len(unsubscribed))
+    return {"result": "success", "handled": handled, "unsubscribed": len(unsubscribed)}
 
 
 @router.post("/conversion")
