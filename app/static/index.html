@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>货袋子增长运营平台</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+<script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
+<script src="https://cdn.tailwindcss.com/3.4.1"></script>
+<link rel="stylesheet" href="/static/styles.css" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          brand: { 50:'#eef7ff',100:'#d9edff',400:'#3b9dff',500:'#1a7ff0',600:'#0f63c4',700:'#0d4f9c' },
+          ink: { 500:'#64748b', 700:'#334155', 900:'#0f172a' }
+        }
+      }
+    }
+  }
+</script>
+</head>
+<body class="bg-slate-50 text-ink-900">
+<div id="app" v-cloak></div>
+<script type="module" src="/static/app.js"></script>
+</body>
+</html>
