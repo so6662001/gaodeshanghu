@@ -13,14 +13,23 @@ import base64
 import json
 import shutil
 import subprocess
-import sys
 import tempfile
+import time
 from html import escape
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE = HERE / "template.html"
 WIDTH = 750
+
+THEMES = {
+    "steel": "深邃钢蓝：深色高对比、钢材斜纹质感，默认风格，通用",
+    "paper": "极简白：研报感，适合正式客户、企业采购群",
+    "terminal": "财经终端：黑底荧光、等宽数字，给盯盘型老板",
+    "industrial": "工业橙黑：大色块、直角、硬朗，给工程总包、重型行业",
+    "kraft": "暖纸墨韵：牛皮纸底、朱砂红、宋体标题，商圈熟客群有人情味",
+    "sky": "清新蓝白：轻盈圆润、互联网感，给年轻采购与平台新用户",
+}
 
 
 def _img_tag(path_or_url: str) -> str:
@@ -97,8 +106,11 @@ def _resource(item: dict, market: dict[str, int]) -> str:
     )
 
 
-def render_html(data: dict) -> str:
+def render_html(data: dict, theme: str | None = None) -> str:
     html = TEMPLATE.read_text(encoding="utf-8")
+    theme = theme or data.get("theme") or "steel"
+    if theme not in THEMES:
+        raise SystemExit(f"未知风格 {theme}，可选：{', '.join(THEMES)}")
     cards = "\n".join(_card(p) for p in data.get("prices", []))
     market = {p["name"]: int(p["price"]) for p in data.get("prices", [])}
     resources = "\n".join(_resource(r, market) for r in data.get("resources", []))
@@ -113,6 +125,7 @@ def render_html(data: dict) -> str:
     # headline / summary 允许带 <b> <span class="hl"> 等少量标记，其余字段转义
     raw_fields = {"headline", "summary", "insight"}
     values = {
+        "theme": theme,
         "cards": cards,
         "resources": resources,
         "avatar": avatar,
@@ -121,7 +134,7 @@ def render_html(data: dict) -> str:
         "res_more": escape(str(data.get("res_more", ""))),
     }
     for key, value in data.items():
-        if key in ("prices", "resources", "avatar_image", "avatar_text", "qr_image"):
+        if key in ("prices", "resources", "avatar_image", "avatar_text", "qr_image", "theme"):
             continue
         values[key] = str(value) if key in raw_fields else escape(str(value))
 
@@ -138,9 +151,9 @@ def find_chrome() -> str:
     raise SystemExit("未找到 Chrome / Chromium，请先安装浏览器")
 
 
-def render_png(data: dict, output: Path, height: int = 1930) -> Path:
-    html = render_html(data)
-    with tempfile.TemporaryDirectory() as tmp:
+def render_png(data: dict, output: Path, height: int = 1930, theme: str | None = None) -> Path:
+    html = render_html(data, theme)
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         html_path = Path(tmp) / "poster.html"
         html_path.write_text(html, encoding="utf-8")
         cmd = [
@@ -157,22 +170,57 @@ def render_png(data: dict, output: Path, height: int = 1930) -> Path:
             html_path.as_uri(),
         ]
         output.unlink(missing_ok=True)
+        # 部分容器环境没有 dbus，Chrome 截图完成后不会自行退出，
+        # 所以不等进程结束，文件落地且大小稳定就直接收工
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        deadline = time.time() + 40
+        last_size = -1
         try:
-            # 部分容器环境没有 dbus，Chrome 截图完成后不会自行退出，以文件产出为准
-            subprocess.run(cmd, capture_output=True, timeout=40)
-        except subprocess.TimeoutExpired:
-            pass
+            while time.time() < deadline:
+                if proc.poll() is not None and output.exists():
+                    break
+                if output.exists():
+                    size = output.stat().st_size
+                    if size and size == last_size:
+                        break
+                    last_size = size
+                time.sleep(0.3)
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait(timeout=5)
         if not output.exists():
             raise SystemExit("海报渲染失败，请确认 Chrome 可正常启动")
     return output
 
 
 def main() -> None:
-    if len(sys.argv) < 2:
-        raise SystemExit(__doc__)
-    data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-    output = Path(sys.argv[2] if len(sys.argv) > 2 else "poster.png")
-    render_png(data, output)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="每日行情海报生成器")
+    parser.add_argument("data", help="海报数据 JSON")
+    parser.add_argument("output", nargs="?", default="poster.png", help="输出 PNG 路径或 --all 时的目录")
+    parser.add_argument("--theme", choices=list(THEMES), help="风格，不填读 JSON 里的 theme，默认 steel")
+    parser.add_argument("--all", action="store_true", help="一次输出全部风格到目录，用于挑选")
+    parser.add_argument("--list", action="store_true", help="列出可用风格")
+    args = parser.parse_args()
+
+    if args.list:
+        for key, desc in THEMES.items():
+            print(f"{key:<12}{desc}")
+        return
+
+    data = json.loads(Path(args.data).read_text(encoding="utf-8"))
+    if args.all:
+        outdir = Path(args.output if args.output != "poster.png" else "posters")
+        outdir.mkdir(parents=True, exist_ok=True)
+        for key in THEMES:
+            render_png(data, outdir / f"{key}.png", theme=key)
+            print(f"已生成 {outdir / f'{key}.png'}  ({THEMES[key]})")
+        return
+
+    output = Path(args.output)
+    render_png(data, output, theme=args.theme)
     print(f"已生成 {output} ({WIDTH*2}px 宽，2x 高清)")
 
 

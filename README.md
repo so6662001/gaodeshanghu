@@ -184,7 +184,18 @@ python poster/render.py poster/today.json today.png
 ```
 
 只依赖本机 Chrome，无需装任何 Python 包。头像和二维码在 JSON 里填本地图片路径即可替换。
-设计要点见 `poster/template.html` 顶部注释，效果参考 `poster/sample.png`。
+
+内置 6 种风格，同一份数据一键切换（`--theme steel|paper|terminal|industrial|kraft|sky`），
+`--all` 一次出全套用于挑选，效果见 `poster/samples/all-styles.png`：
+
+| 风格 | 适合场景 |
+| --- | --- |
+| `steel` 深邃钢蓝 | 默认，通用，在白底图海里最跳 |
+| `paper` 极简白 | 研报感，正式客户、企业采购群 |
+| `terminal` 财经终端 | 黑底荧光等宽数字，盯盘型老板 |
+| `industrial` 工业橙黑 | 大色块直角，工程总包、重型行业 |
+| `kraft` 暖纸墨韵 | 牛皮纸朱砂红宋体，商圈熟客群 |
+| `sky` 清新蓝白 | 轻盈圆润，年轻采购、平台新用户 |
 
 ## 系统架构
 
