@@ -172,6 +172,20 @@ ROI 会有数量级的差异。
 
 ---
 
+## 每日行情海报生成器
+
+`poster/` 目录是发微信群用的行情早报海报模板，深色高对比、首屏直接给结论，
+专门针对「群里刷到 0.5 秒内要不要停下来」这个场景设计。
+
+```bash
+# 把当天的价格、涨跌、看点填进 JSON，一条命令出图（2x 高清）
+cp poster/data.example.json poster/today.json
+python poster/render.py poster/today.json today.png
+```
+
+只依赖本机 Chrome，无需装任何 Python 包。头像和二维码在 JSON 里填本地图片路径即可替换。
+设计要点见 `poster/template.html` 顶部注释，效果参考 `poster/sample.png`。
+
 ## 系统架构
 
 ```

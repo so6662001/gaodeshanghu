@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 750px; background: #0b1220; }
+  body {
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+    color: #f5f7fb;
+    -webkit-font-smoothing: antialiased;
+  }
+  .poster {
+    width: 750px;
+    min-height: 1400px;
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(900px 420px at 85% -10%, rgba(255,122,26,.42), transparent 60%),
+      radial-gradient(700px 500px at -10% 30%, rgba(31,90,255,.22), transparent 60%),
+      linear-gradient(180deg, #0b1220 0%, #101a30 55%, #0b1220 100%);
+    padding: 44px 44px 0;
+  }
+  /* 钢材质感斜纹，增加"行业感"而不抢内容 */
+  .poster::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg, rgba(255,255,255,.025) 0 2px, transparent 2px 22px);
+    pointer-events: none;
+  }
+  .num { font-family: "DIN Alternate", "Helvetica Neue", Arial, "WenQuanYi Micro Hei", sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+
+  /* 顶栏 */
+  .top { display: flex; justify-content: space-between; align-items: center; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .logo { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg,#ff7a1a,#ff4d4f); display:flex; align-items:center; justify-content:center; font-weight: 800; font-size: 20px; }
+  .brand .name { font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+  .brand .sub { font-size: 16px; color: rgba(245,247,251,.55); margin-top: 3px; }
+  .issue { text-align: right; }
+  .issue .no { font-size: 20px; color: #ffb27a; font-weight: 700; }
+  .issue .date { font-size: 16px; color: rgba(245,247,251,.6); margin-top: 3px; }
+
+  /* 首屏钩子：一眼看到结论 */
+  .hero { margin-top: 56px; }
+  .hero .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 18px; color: #ffb27a; font-weight: 600; }
+  .hero .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #ff7a1a; box-shadow: 0 0 0 4px rgba(255,122,26,.25); }
+  .hero .headline { margin-top: 14px; font-size: 64px; font-weight: 900; line-height: 1.1; letter-spacing: -1px; }
+  .hero .headline .hl { color: #ff4d4f; }
+  .hero .headline .hl.down { color: #34d399; }
+  .hero .summary { margin-top: 16px; font-size: 22px; color: rgba(245,247,251,.78); line-height: 1.5; }
+  .hero .summary b { color: #fff; }
+
+  /* 行情卡片 */
+  .grid { margin-top: 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .card {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 18px;
+    padding: 20px 18px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card.lead { background: linear-gradient(160deg, rgba(255,77,79,.28), rgba(255,122,26,.10)); border-color: rgba(255,122,26,.45); }
+  .card.lead::after { content: "领涨"; position: absolute; top: 0; right: 0; background: #ff4d4f; color: #fff; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 0 0 0 10px; }
+  .card .k { font-size: 19px; color: rgba(245,247,251,.72); font-weight: 500; }
+  .card .v { margin-top: 10px; font-size: 40px; font-weight: 800; line-height: 1; }
+  .card .v small { font-size: 16px; color: rgba(245,247,251,.5); font-weight: 500; margin-left: 4px; }
+  .card .chg { margin-top: 12px; display: flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 700; }
+  .card .chg.up { color: #ff6b6d; }
+  .card .chg.down { color: #34d399; }
+  .card .chg.flat { color: rgba(245,247,251,.5); }
+  .card .chg .arrow { font-size: 16px; }
+  .card .wk { margin-top: 6px; font-size: 14px; color: rgba(245,247,251,.42); }
+
+  /* 今日看点：给一个观点，让人愿意转发 */
+  .insight {
+    margin-top: 28px;
+    background: rgba(255,178,122,.08);
+    border-left: 4px solid #ff7a1a;
+    border-radius: 0 16px 16px 0;
+    padding: 20px 24px;
+  }
+  .insight .t { font-size: 17px; color: #ffb27a; font-weight: 700; letter-spacing: 2px; }
+  .insight .c { margin-top: 8px; font-size: 21px; line-height: 1.6; color: rgba(245,247,251,.9); }
+
+  /* 软件产品：压成一条服务带，不与钢材行情混排 */
+  .service {
+    margin-top: 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(90deg, rgba(31,90,255,.22), rgba(31,90,255,.06));
+    border: 1px solid rgba(120,160,255,.22);
+    border-radius: 16px; padding: 18px 22px;
+  }
+  .service .l .t { font-size: 19px; font-weight: 700; }
+  .service .l .d { margin-top: 5px; font-size: 15px; color: rgba(245,247,251,.6); }
+  .service .r { text-align: right; white-space: nowrap; }
+  .service .r .p { font-size: 26px; font-weight: 800; color: #8fb3ff; }
+  .service .r .u { font-size: 14px; color: rgba(245,247,251,.5); }
+
+  /* 底部：人 + 二维码 + 明确的利益承诺 */
+  .footer {
+    margin: 32px -44px 0;
+    padding: 30px 44px 36px;
+    background: rgba(255,255,255,.04);
+    border-top: 1px solid rgba(255,255,255,.08);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .person { display: flex; align-items: center; gap: 18px; }
+  .avatar {
+    width: 92px; height: 92px; border-radius: 50%;
+    background: linear-gradient(135deg,#ff7a1a,#ff4d4f);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; font-weight: 800;
+    border: 3px solid rgba(255,255,255,.18);
+    overflow: hidden;
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .person .n { font-size: 26px; font-weight: 700; }
+  .person .role { margin-top: 4px; font-size: 15px; color: #ffb27a; }
+  .person .tel { margin-top: 8px; font-size: 20px; font-weight: 600; letter-spacing: 1px; }
+  .qr { text-align: center; }
+  .qr .box { width: 132px; height: 132px; background: #fff; border-radius: 14px; padding: 8px; }
+  .qr .box img { width: 100%; height: 100%; display: block; }
+  .qr .cta { margin-top: 8px; font-size: 14px; color: #ffb27a; font-weight: 600; }
+  .bottom-line { text-align: center; padding: 0 0 26px; font-size: 14px; color: rgba(245,247,251,.4); background: rgba(255,255,255,.04); margin: 0 -44px; }
+</style>
+</head>
+<body>
+<div class="poster">
+  <div class="top">
+    <div class="brand">
+      <div class="logo">普</div>
+      <div>
+        <div class="name">{{brand}}</div>
+        <div class="sub">{{brand_sub}}</div>
+      </div>
+    </div>
+    <div class="issue">
+      <div class="no">第 {{issue_no}} 期</div>
+      <div class="date">{{date}}</div>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="eyebrow">{{market}} · 今日行情</div>
+    <div class="headline">{{headline}}</div>
+    <div class="summary">{{summary}}</div>
+  </div>
+
+  <div class="grid">
+    {{cards}}
+  </div>
+
+  <div class="insight">
+    <div class="t">今日看点</div>
+    <div class="c">{{insight}}</div>
+  </div>
+
+  <div class="service">
+    <div class="l">
+      <div class="t">{{service_title}}</div>
+      <div class="d">{{service_desc}}</div>
+    </div>
+    <div class="r">
+      <div class="p">{{service_price}}</div>
+      <div class="u">{{service_unit}}</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="person">
+      <div class="avatar">{{avatar}}</div>
+      <div>
+        <div class="n">{{name}}</div>
+        <div class="role">{{role}}</div>
+        <div class="tel num">{{tel}}</div>
+      </div>
+    </div>
+    <div class="qr">
+      <div class="box">{{qr}}</div>
+      <div class="cta">{{cta}}</div>
+    </div>
+  </div>
+  <div class="bottom-line">{{bottom_line}}</div>
+</div>
+</body>
+</html>
