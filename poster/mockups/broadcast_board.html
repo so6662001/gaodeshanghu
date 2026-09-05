@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 3200px; height: 1180px; overflow: hidden; background: #0b1220; }
+  body { font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif; color: #fff; padding: 80px 90px; --accent: #ff7a1a; }
+  .num { font-family: "DIN Alternate", "Helvetica Neue", Arial, sans-serif; font-variant-numeric: tabular-nums; }
+  h1 { font-size: 64px; font-weight: 900; }
+  h1 small { font-size: 28px; color: rgba(255,255,255,.6); font-weight: 500; margin-left: 24px; }
+  .sub { margin-top: 12px; font-size: 26px; color: rgba(255,255,255,.7); }
+
+  .tl { margin-top: 56px; display: grid; grid-template-columns: 260px 1fr; row-gap: 18px; }
+  .lab { font-size: 26px; font-weight: 800; display: flex; align-items: center; gap: 12px; padding-right: 24px; }
+  .lab i { width: 10px; height: 44px; border-radius: 4px; background: var(--c, #64748b); }
+  .lab small { display: block; font-size: 18px; color: rgba(255,255,255,.55); font-weight: 500; margin-top: 4px; }
+  .track { position: relative; height: 120px; background: rgba(255,255,255,.04); border-radius: 12px; }
+  .track.thin { height: 96px; }
+  .seg { position: absolute; top: 10px; bottom: 10px; border-radius: 10px; padding: 12px 18px; font-size: 22px; line-height: 1.3; overflow: hidden; border: 1px solid rgba(255,255,255,.15); }
+  .seg b { display: block; font-size: 24px; margin-bottom: 4px; }
+  .seg.v { background: linear-gradient(180deg, #1e3a5f, #142a48); }
+  .seg.g { background: linear-gradient(180deg, rgba(255,122,26,.9), rgba(255,122,26,.65)); color: #1a0d00; border-color: rgba(255,255,255,.3); }
+  .seg.g b { color: #1a0d00; }
+  .seg.n { background: rgba(255,255,255,.1); }
+  .seg.n b { color: #ffd08a; }
+  .seg.fx { background: #7c3aed; height: 44px; top: 26px; padding: 6px 14px; font-size: 20px; white-space: nowrap; }
+  .bgm { position: absolute; inset: 10px; }
+  .bgm svg { width: 100%; height: 100%; display: block; }
+
+  .ruler { display: grid; grid-template-columns: 260px 1fr; margin-top: 8px; }
+  .ruler .ticks { position: relative; height: 40px; border-top: 2px solid rgba(255,255,255,.2); }
+  .ruler .t { position: absolute; top: 6px; transform: translateX(-50%); font-size: 20px; color: rgba(255,255,255,.55); }
+  .ruler .t::before { content: ""; position: absolute; left: 50%; top: -8px; width: 2px; height: 8px; background: rgba(255,255,255,.4); }
+
+  .notes { margin-top: 60px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .note { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 30px 34px; }
+  .note h3 { font-size: 28px; font-weight: 900; color: #ffd08a; display: flex; align-items: center; gap: 12px; }
+  .note h3 i { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); }
+  .note p { margin-top: 14px; font-size: 22px; line-height: 1.6; color: rgba(255,255,255,.85); }
+  .note p b { color: #fff; }
+</style>
+</head>
+<body>
+<h1>「行情直播间」分镜与音轨设计<small>42 秒 · 1080×1920 · 视频号直发</small></h1>
+<div class="sub">实拍是主画面；数据图层只在旁白提到它的那几秒出现；BGM 在人声下自动压低（ducking）；每条信息弹入配一声轻击音效。</div>
+
+<div class="tl">
+  <div class="lab" style="--c:#3b82f6"><i></i><div>画面轨<small>用户实拍 · 自动裁竖版</small></div></div>
+  <div class="track">
+    <div class="seg v" style="left:0%;width:9.5%"><b>① 焊接 / 生产</b>片头氛围</div>
+    <div class="seg v" style="left:9.8%;width:16.4%"><b>② 钢厂 / 厂区</b>全景行情底</div>
+    <div class="seg v" style="left:26.5%;width:11.6%"><b>③ 钢筋工地</b>领涨特写</div>
+    <div class="seg v" style="left:38.4%;width:16.4%"><b>④ 工地全景</b>观点段</div>
+    <div class="seg v" style="left:55.1%;width:18.7%"><b>⑤ 仓库巷道</b>现货段</div>
+    <div class="seg v" style="left:74.1%;width:14%"><b>⑥ 装车 / 货车</b>配送段</div>
+    <div class="seg v" style="left:88.4%;width:11.6%"><b>⑦ 物流航拍</b>高斯模糊做底</div>
+  </div>
+
+  <div class="lab" style="--c:#ff7a1a"><i></i><div>图层轨<small>信息随旁白弹入</small></div></div>
+  <div class="track">
+    <div class="seg g" style="left:0%;width:9.5%"><b>大标题</b>期数 · 播报人</div>
+    <div class="seg g" style="left:9.8%;width:16.4%"><b>六格行情板</b>逐格弹入 0.25s/格</div>
+    <div class="seg g" style="left:26.5%;width:11.6%"><b>大数字 3,620</b>数字滚动 + 走势线画出</div>
+    <div class="seg g" style="left:38.4%;width:16.4%"><b>看点卡 + 主播条</b>lower third 从左滑入</div>
+    <div class="seg g" style="left:55.1%;width:18.7%"><b>现货条 ×2</b>逐条上滑，主推高亮</div>
+    <div class="seg g" style="left:74.1%;width:14%"><b>气泡标注</b>整车优惠 / 免费配送</div>
+    <div class="seg g" style="left:88.4%;width:11.6%"><b>店铺二维码</b>放大定格 4s</div>
+  </div>
+
+  <div class="lab" style="--c:#ffd08a"><i></i><div>旁白轨<small>AI 配音或商家自录</small></div></div>
+  <div class="track">
+    <div class="seg n" style="left:0%;width:9.5%"><b>0–4s</b>早上好，今天是 9 月 5 日，这里是普讯钢贸行情早报。</div>
+    <div class="seg n" style="left:9.8%;width:16.4%"><b>4–11s</b>南京市场 6 个主流品种，4 涨 1 平 1 跌，均价重心继续上移。</div>
+    <div class="seg n" style="left:26.5%;width:11.6%"><b>11–16s</b>热卷领涨，上调 40 元报 3620，创两周新高。</div>
+    <div class="seg n" style="left:38.4%;width:16.4%"><b>16–23s</b>华东库存连续三周回落，下游节前赶工，需求有支撑。刚需按需备货。</div>
+    <div class="seg n" style="left:55.1%;width:18.7%"><b>23–31s</b>六合仓热卷现货 320 吨，报 3580，比市场均价低 40，今天就能提。</div>
+    <div class="seg n" style="left:74.1%;width:14%"><b>31–37s</b>浦口仓热镀方管 180 吨，整车优惠，市区免费配送。</div>
+    <div class="seg n" style="left:88.4%;width:11.6%"><b>37–42s</b>更多现货扫码进店，明早 8 点再见。</div>
+  </div>
+
+  <div class="lab" style="--c:#22c55e"><i></i><div>BGM 轨<small>人声下自动压低</small></div></div>
+  <div class="track thin">
+    <div class="bgm"><svg viewBox="0 0 1000 76" preserveAspectRatio="none">
+      <defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#22c55e" stop-opacity=".7"/><stop offset="1" stop-color="#22c55e" stop-opacity=".05"/></linearGradient></defs>
+      <path d="M0 76 L0 40 L20 12 L70 10 L95 14 L100 52 L260 52 L265 30 L360 30 L365 52 L550 52 L555 46 L740 46 L745 52 L880 52 L885 24 L960 18 L985 30 L1000 76 Z" fill="url(#g)"/>
+      <path d="M0 40 L20 12 L70 10 L95 14 L100 52 L260 52 L265 30 L360 30 L365 52 L550 52 L555 46 L740 46 L745 52 L880 52 L885 24 L960 18 L985 30 L1000 76" fill="none" stroke="#22c55e" stroke-width="3"/>
+      <text x="35" y="70" fill="#86efac" font-size="16">片头 100%</text>
+      <text x="150" y="70" fill="#86efac" font-size="16">人声下 -14dB</text>
+      <text x="290" y="70" fill="#86efac" font-size="16">特写起 -8dB</text>
+      <text x="900" y="70" fill="#86efac" font-size="16">片尾扬起 · 淡出</text>
+    </svg></div>
+  </div>
+
+  <div class="lab" style="--c:#7c3aed"><i></i><div>音效轨<small>轻、短、不抢人声</small></div></div>
+  <div class="track thin">
+    <div class="seg fx" style="left:0.5%">▶ 开场 whoosh</div>
+    <div class="seg fx" style="left:10%">tick ×6 逐格</div>
+    <div class="seg fx" style="left:27%">数字滚动 tick</div>
+    <div class="seg fx" style="left:32%">走势线 swoosh</div>
+    <div class="seg fx" style="left:39%">卡片 pop</div>
+    <div class="seg fx" style="left:56%">上滑 swish ×2</div>
+    <div class="seg fx" style="left:75%">气泡 pop</div>
+    <div class="seg fx" style="left:89%">二维码 ding</div>
+  </div>
+</div>
+<div class="ruler"><div></div><div class="ticks">
+  <span class="t num" style="left:0%">0s</span><span class="t num" style="left:11.9%">5s</span><span class="t num" style="left:23.8%">10s</span>
+  <span class="t num" style="left:35.7%">15s</span><span class="t num" style="left:47.6%">20s</span><span class="t num" style="left:59.5%">25s</span>
+  <span class="t num" style="left:71.4%">30s</span><span class="t num" style="left:83.3%">35s</span><span class="t num" style="left:95.2%">40s</span><span class="t num" style="left:100%">42s</span>
+</div></div>
+
+<div class="notes">
+  <div class="note"><h3><i></i>旁白怎么来</h3><p>默认 <b>AI 配音</b>：旁白脚本由行情数据自动生成，云希（男·播报感）/ 晓晓（女·亲和）两档可选，字幕与语音逐句对齐。商家也可以在后台<b>自己录一段</b>，系统按停顿自动切句、对齐字幕。</p></div>
+  <div class="note"><h3><i></i>实拍怎么用</h3><p>上传 1–7 段手机视频（横竖不限），系统按幕自动<b>裁竖版、匹配时长、慢推镜头</b>；少于 7 段则循环复用。实拍保持真实亮度，只在底部 45% 加渐变保证字幕可读，<b>不再整片压暗</b>。</p></div>
+  <div class="note"><h3><i></i>为什么像天气预报</h3><p>央视天气预报的逻辑是：<b>画面是背景，播报是主线，数据在被提到时才出现</b>。这里完全照搬：行情板逐格弹入对应"逐城报温"，领涨大数字对应"今日最高温"，主播条对应"预报员署名"。</p></div>
+  <div class="note"><h3><i></i>片尾转化</h3><p>最后 5 秒只留一件事：<b>货袋子店铺二维码</b>放大定格，BGM 扬起收尾。二维码用商家在货袋子的店铺码（也可换视频号码），上传后自动替换占位图。视频号正文第一行同步放店铺链接。</p></div>
+</div>
+</body>
+</html>
