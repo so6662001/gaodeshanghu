@@ -57,9 +57,51 @@ def _card(item: dict) -> str:
     )
 
 
+def _resource(item: dict, market: dict[str, int]) -> str:
+    """一条优势现货。核心是把「为什么找我买」显性化：比均价低多少、有多少、能不能提。"""
+    price = int(item["price"])
+    ref = item.get("vs_market")
+    if ref is None and item.get("name") in market:
+        ref = price - market[item["name"]]
+    vs_html = ""
+    if ref is not None:
+        ref = int(ref)
+        if ref < 0:
+            vs_html = f'<div class="vs below">低于均价 {abs(ref)}</div>'
+        elif ref > 0:
+            vs_html = f'<div class="vs above">高于均价 {ref}</div>'
+        else:
+            vs_html = '<div class="vs above">与均价持平</div>'
+
+    meta = []
+    if item.get("origin"):
+        meta.append(f"<span>钢厂 <b>{escape(str(item['origin']))}</b></span>")
+    if item.get("warehouse"):
+        meta.append(f"<span>{escape(str(item['warehouse']))}</span>")
+    if item.get("qty"):
+        meta.append(f"<span>现货 <b>{escape(str(item['qty']))}</b></span>")
+
+    tags = "".join(
+        f'<span class="tag{" hot" if i == 0 and item.get("hot") else ""}">{escape(str(t))}</span>'
+        for i, t in enumerate(item.get("tags", []))
+    )
+    hot = " hot" if item.get("hot") else ""
+    return (
+        f'<div class="row{hot}">'
+        f'<div><div class="n"><span class="name">{escape(str(item["name"]))}</span>'
+        f'<span class="spec">{escape(str(item.get("spec", "")))}</span></div>'
+        f'<div class="meta">{"".join(meta)}</div>'
+        f'{f"<div class=tags>{tags}</div>" if tags else ""}</div>'
+        f'<div class="p"><div class="price num">{price:,}<small>元/吨</small></div>{vs_html}</div>'
+        f"</div>"
+    )
+
+
 def render_html(data: dict) -> str:
     html = TEMPLATE.read_text(encoding="utf-8")
     cards = "\n".join(_card(p) for p in data.get("prices", []))
+    market = {p["name"]: int(p["price"]) for p in data.get("prices", [])}
+    resources = "\n".join(_resource(r, market) for r in data.get("resources", []))
 
     avatar = _img_tag(data.get("avatar_image", "")) or escape(data.get("avatar_text", "普"))
     qr = _img_tag(data.get("qr_image", "")) or (
@@ -72,11 +114,14 @@ def render_html(data: dict) -> str:
     raw_fields = {"headline", "summary", "insight"}
     values = {
         "cards": cards,
+        "resources": resources,
         "avatar": avatar,
         "qr": qr,
+        "res_note": escape(str(data.get("res_note", ""))),
+        "res_more": escape(str(data.get("res_more", ""))),
     }
     for key, value in data.items():
-        if key in ("prices", "avatar_image", "avatar_text", "qr_image"):
+        if key in ("prices", "resources", "avatar_image", "avatar_text", "qr_image"):
             continue
         values[key] = str(value) if key in raw_fields else escape(str(value))
 
@@ -93,7 +138,7 @@ def find_chrome() -> str:
     raise SystemExit("未找到 Chrome / Chromium，请先安装浏览器")
 
 
-def render_png(data: dict, output: Path, height: int = 1400) -> Path:
+def render_png(data: dict, output: Path, height: int = 1930) -> Path:
     html = render_html(data)
     with tempfile.TemporaryDirectory() as tmp:
         html_path = Path(tmp) / "poster.html"

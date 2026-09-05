@@ -12,7 +12,7 @@
   }
   .poster {
     width: 750px;
-    min-height: 1400px;
+    min-height: 1930px;
     position: relative;
     overflow: hidden;
     background:
@@ -82,6 +82,35 @@
   }
   .insight .t { font-size: 17px; color: #ffb27a; font-weight: 700; letter-spacing: 2px; }
   .insight .c { margin-top: 8px; font-size: 21px; line-height: 1.6; color: rgba(245,247,251,.9); }
+
+  /* 优势现货：这张图真正的"钱在哪"。重点不是列价格，是把优势可视化 */
+  .res { margin-top: 28px; }
+  .res .head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px 12px; }
+  .res .head .t { font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+  .res .head .t em { font-style: normal; color: #ff7a1a; }
+  .res .head .s { font-size: 14px; color: rgba(245,247,251,.45); }
+  .res .row {
+    display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 16px; padding: 16px 20px; margin-bottom: 10px;
+  }
+  .res .row.hot { background: linear-gradient(90deg, rgba(255,122,26,.16), rgba(255,255,255,.04)); border-color: rgba(255,122,26,.4); }
+  .res .n { display: flex; align-items: center; gap: 10px; }
+  .res .n .name { font-size: 22px; font-weight: 800; }
+  .res .n .spec { font-size: 16px; color: rgba(245,247,251,.7); }
+  .res .meta { margin-top: 7px; display: flex; gap: 14px; font-size: 14px; color: rgba(245,247,251,.5); }
+  .res .meta b { color: rgba(245,247,251,.85); font-weight: 600; }
+  .res .tags { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .res .tag { font-size: 12px; padding: 2px 8px; border-radius: 6px; background: rgba(143,179,255,.14); color: #a9c4ff; font-weight: 600; }
+  .res .tag.hot { background: rgba(255,122,26,.2); color: #ffb27a; }
+  .res .p { text-align: right; white-space: nowrap; }
+  .res .p .price { font-size: 32px; font-weight: 800; line-height: 1; }
+  .res .p .price small { font-size: 14px; color: rgba(245,247,251,.5); font-weight: 500; margin-left: 3px; }
+  .res .p .vs { margin-top: 8px; display: inline-block; font-size: 15px; font-weight: 700; padding: 3px 10px; border-radius: 8px; }
+  .res .p .vs.below { background: rgba(52,211,153,.15); color: #34d399; }
+  .res .p .vs.above { background: rgba(255,255,255,.08); color: rgba(245,247,251,.6); }
+  .res .more { text-align: center; font-size: 14px; color: rgba(245,247,251,.45); padding: 6px 0 0; }
 
   /* 软件产品：压成一条服务带，不与钢材行情混排 */
   .service {
@@ -154,6 +183,15 @@
   <div class="insight">
     <div class="t">今日看点</div>
     <div class="c">{{insight}}</div>
+  </div>
+
+  <div class="res">
+    <div class="head">
+      <div class="t">优势现货 <em>·</em> 今日可提</div>
+      <div class="s">{{res_note}}</div>
+    </div>
+    {{resources}}
+    <div class="more">{{res_more}}</div>
   </div>
 
   <div class="service">
