@@ -16,6 +16,7 @@ from app.api import (
     routes_callback,
     routes_collect,
     routes_marketing,
+    routes_media,
     routes_merchants,
     routes_sms,
     routes_stats,
@@ -110,6 +111,7 @@ app.include_router(routes_sms.router)
 app.include_router(routes_stats.router)
 app.include_router(routes_callback.router)
 app.include_router(routes_track.router)
+app.include_router(routes_media.router)
 
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

@@ -1418,10 +1418,258 @@ const Channel = {
 };
 
 // ---------------------------------------------------------------------------
+// 宣传物料：行情海报 + 视频号成片
+// ---------------------------------------------------------------------------
+const Media = {
+  setup() {
+    const form = ref(null);
+    const themes = ref([]);
+    const jobs = ref([]);
+    const kind = ref('video');
+    const theme = ref('steel');
+    const files = reactive({ video: null, bgm: null, channel_qr: null, qr: null, avatar: null });
+    const submitting = ref(false);
+    const active = ref(null);
+    let timer = null;
+
+    const emptyPrice = () => ({ name: '', price: '', change: 0, week: 0, lead: false });
+    const emptyRes = () => ({ name: '', spec: '', origin: '', warehouse: '', qty: '', price: '', hot: false, tagsText: '' });
+
+    async function load() {
+      try {
+        const [example, ts, js] = await Promise.all([
+          get('/api/media/example'), get('/api/media/themes'), get('/api/media/jobs')]);
+        const saved = localStorage.getItem('hdz_media_form');
+        form.value = saved ? JSON.parse(saved) : normalize(example);
+        themes.value = ts;
+        jobs.value = js;
+        if (js.some((j) => ['queued', 'running'].includes(j.status))) poll();
+      } catch (e) { notify(e.message, 'err'); }
+    }
+    function normalize(d) {
+      return {
+        ...d,
+        resources: (d.resources || []).map((r) => ({ ...r, tagsText: (r.tags || []).join(' ') })),
+      };
+    }
+    function reset() {
+      localStorage.removeItem('hdz_media_form');
+      load();
+      notify('已恢复样例数据');
+    }
+    function payload() {
+      const f = form.value;
+      const prices = f.prices.filter((p) => p.name && p.price !== '')
+        .map((p) => ({ ...p, price: Number(p.price), change: Number(p.change || 0), week: Number(p.week || 0) }));
+      const resources = f.resources.filter((r) => r.name)
+        .map(({ tagsText, ...r }) => ({ ...r, price: Number(r.price), tags: tagsText.split(/[\s,，]+/).filter(Boolean) }));
+      return { ...f, prices, resources, theme: theme.value };
+    }
+    function pick(key, ev) { files[key] = ev.target.files[0] || null; }
+    async function submit() {
+      const data = payload();
+      if (!data.prices.length) return notify('至少填一行行情价格', 'err');
+      localStorage.setItem('hdz_media_form', JSON.stringify(form.value));
+      submitting.value = true;
+      try {
+        const fd = new FormData();
+        fd.append('kind', kind.value);
+        fd.append('theme', theme.value);
+        fd.append('data', JSON.stringify(data));
+        Object.entries(files).forEach(([k, v]) => v && fd.append(k, v));
+        const res = await fetch('/api/media/jobs', { method: 'POST', body: fd, headers: { 'X-Api-Token': token.value } });
+        const job = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(job.detail || `请求失败 ${res.status}`);
+        jobs.value.unshift(job);
+        active.value = job;
+        notify(kind.value === 'video' ? '已开始出片，约 1 分钟' : '已开始渲染海报');
+        poll();
+      } catch (e) { notify(e.message, 'err'); } finally { submitting.value = false; }
+    }
+    function poll() {
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        try {
+          jobs.value = await get('/api/media/jobs');
+          if (active.value) active.value = jobs.value.find((j) => j.id === active.value.id) || active.value;
+          if (jobs.value.some((j) => ['queued', 'running'].includes(j.status))) poll();
+          else if (active.value?.status === 'done') notify('生成完成');
+        } catch (e) { /* 轮询失败静默 */ }
+      }, 2000);
+    }
+    const fileUrl = (job, name) => `/api/media/jobs/${job.id}/${name}?token=${encodeURIComponent(token.value)}`;
+    const STATUS = { queued: '排队中', running: '生成中', done: '已完成', failed: '失败' };
+    onMounted(load);
+    onUnmounted(() => clearTimeout(timer));
+    return { form, themes, jobs, kind, theme, files, submitting, active, emptyPrice, emptyRes,
+      reset, pick, submit, fileUrl, STATUS, fmtTime };
+  },
+  template: `
+  <div class="space-y-5" v-if="form">
+    <div class="flex items-start justify-between">
+      <div>
+        <h1 class="text-xl font-semibold">宣传物料</h1>
+        <p class="text-sm text-ink-500 mt-1">同一份行情数据，一键出静态海报和视频号成片。视频号分享进群，点开即看，评论区、主页都能直接跳到货袋子</p>
+      </div>
+      <button class="btn btn-ghost" @click="reset">恢复样例</button>
+    </div>
+
+    <div class="grid lg:grid-cols-[1fr_420px] gap-5">
+      <div class="space-y-5">
+        <div class="card p-5">
+          <h2 class="font-medium mb-4">头部与结论</h2>
+          <div class="grid md:grid-cols-3 gap-3 text-sm">
+            <label class="block"><span class="text-ink-500 text-xs">品牌</span><input v-model="form.brand" class="input mt-1" /></label>
+            <label class="block"><span class="text-ink-500 text-xs">期数</span><input v-model="form.issue_no" class="input mt-1" /></label>
+            <label class="block"><span class="text-ink-500 text-xs">日期</span><input v-model="form.date" class="input mt-1" /></label>
+            <label class="block"><span class="text-ink-500 text-xs">市场</span><input v-model="form.market" class="input mt-1" /></label>
+            <label class="block md:col-span-2"><span class="text-ink-500 text-xs">副品牌 / 公司</span><input v-model="form.brand_sub" class="input mt-1" /></label>
+            <label class="block md:col-span-3"><span class="text-ink-500 text-xs">大标题（支持 &lt;span class="hl"&gt;+40&lt;/span&gt; 高亮、&lt;br/&gt; 换行）</span>
+              <input v-model="form.headline" class="input mt-1" /></label>
+            <label class="block md:col-span-3"><span class="text-ink-500 text-xs">一句话结论（支持 &lt;b&gt; 加粗）</span>
+              <textarea v-model="form.summary" class="textarea mt-1" rows="2"></textarea></label>
+            <label class="block md:col-span-3"><span class="text-ink-500 text-xs">今日看点</span>
+              <textarea v-model="form.insight" class="textarea mt-1" rows="3"></textarea></label>
+          </div>
+        </div>
+
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-medium">今日行情 <span class="text-xs text-ink-500 font-normal ml-2">最多 6 个品种，勾选"领涨"的会做主卡</span></h2>
+            <button class="btn btn-ghost text-xs" @click="form.prices.push(emptyPrice())" :disabled="form.prices.length >= 6">+ 品种</button>
+          </div>
+          <table class="data">
+            <thead><tr><th>品种</th><th>均价</th><th>日涨跌</th><th>周涨跌</th><th>领涨</th><th></th></tr></thead>
+            <tbody>
+              <tr v-for="(p, i) in form.prices" :key="i">
+                <td><input v-model="p.name" class="input" placeholder="热卷" /></td>
+                <td><input v-model="p.price" type="number" class="input w-28" /></td>
+                <td><input v-model="p.change" type="number" class="input w-24" /></td>
+                <td><input v-model="p.week" type="number" class="input w-24" /></td>
+                <td class="text-center"><input type="checkbox" v-model="p.lead" /></td>
+                <td><button class="btn btn-danger text-xs" @click="form.prices.splice(i, 1)">删</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-medium">优势现货 <span class="text-xs text-ink-500 font-normal ml-2">最多 4 条，价格低于上表均价会自动标"低于均价 N"</span></h2>
+            <button class="btn btn-ghost text-xs" @click="form.resources.push(emptyRes())" :disabled="form.resources.length >= 4">+ 资源</button>
+          </div>
+          <div class="space-y-3">
+            <div v-for="(r, i) in form.resources" :key="i" class="grid md:grid-cols-8 gap-2 text-sm items-center bg-slate-50 rounded-lg p-3">
+              <input v-model="r.name" class="input" placeholder="品名(与行情同名)" />
+              <input v-model="r.spec" class="input md:col-span-2" placeholder="规格 材质" />
+              <input v-model="r.origin" class="input" placeholder="钢厂" />
+              <input v-model="r.warehouse" class="input" placeholder="仓库" />
+              <input v-model="r.qty" class="input" placeholder="数量" />
+              <input v-model="r.price" type="number" class="input" placeholder="价格" />
+              <div class="flex items-center gap-2">
+                <label class="text-xs whitespace-nowrap"><input type="checkbox" v-model="r.hot" /> 主推</label>
+                <button class="btn btn-danger text-xs" @click="form.resources.splice(i, 1)">删</button>
+              </div>
+              <input v-model="r.tagsText" class="input md:col-span-8" placeholder="标签，空格分隔：一手货源 今日可提 可开13%票" />
+            </div>
+          </div>
+          <div class="grid md:grid-cols-2 gap-3 mt-3 text-sm">
+            <label class="block"><span class="text-ink-500 text-xs">现货备注</span><input v-model="form.res_note" class="input mt-1" /></label>
+            <label class="block"><span class="text-ink-500 text-xs">更多现货提示</span><input v-model="form.res_more" class="input mt-1" /></label>
+          </div>
+        </div>
+
+        <div class="card p-5">
+          <h2 class="font-medium mb-4">商家与转化</h2>
+          <div class="grid md:grid-cols-3 gap-3 text-sm">
+            <label class="block"><span class="text-ink-500 text-xs">姓名</span><input v-model="form.name" class="input mt-1" /></label>
+            <label class="block"><span class="text-ink-500 text-xs">头衔</span><input v-model="form.role" class="input mt-1" /></label>
+            <label class="block"><span class="text-ink-500 text-xs">电话</span><input v-model="form.tel" class="input mt-1" /></label>
+            <label class="block"><span class="text-ink-500 text-xs">视频号名称</span><input v-model="form.channel_name" class="input mt-1" placeholder="视频号里显示的名字" /></label>
+            <label class="block md:col-span-2"><span class="text-ink-500 text-xs">服务卖点（海报底栏 / 视频结尾）</span><input v-model="form.service_title" class="input mt-1" /></label>
+            <label class="block"><span class="text-ink-500 text-xs">价格</span><input v-model="form.service_price" class="input mt-1" /></label>
+            <label class="block md:col-span-2"><span class="text-ink-500 text-xs">价格单位说明</span><input v-model="form.service_unit" class="input mt-1" /></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-5">
+        <div class="card p-5 sticky top-5">
+          <h2 class="font-medium mb-4">生成</h2>
+          <div class="flex gap-2 mb-4">
+            <button :class="['btn flex-1', kind==='video' ? 'btn-primary' : 'btn-ghost']" @click="kind='video'">视频号成片</button>
+            <button :class="['btn flex-1', kind==='poster' ? 'btn-primary' : 'btn-ghost']" @click="kind='poster'">静态海报</button>
+          </div>
+          <label class="block text-sm mb-3"><span class="text-ink-500 text-xs">风格</span>
+            <select v-model="theme" class="select mt-1 w-full">
+              <option v-for="t in themes" :key="t.key" :value="t.key">{{ t.key }} · {{ t.desc.split('：')[0] }}</option>
+            </select>
+          </label>
+          <div class="space-y-3 text-sm">
+            <label class="block" v-if="kind==='video'"><span class="text-ink-500 text-xs">背景素材（自己拍的仓库/装车/现场视频，mp4/mov，≤200MB；不传用动态渐变底）</span>
+              <input type="file" accept="video/*" class="mt-1 block w-full text-xs" @change="pick('video', $event)" /></label>
+            <label class="block" v-if="kind==='video'"><span class="text-ink-500 text-xs">背景音乐（可选，mp3/m4a）</span>
+              <input type="file" accept="audio/*" class="mt-1 block w-full text-xs" @change="pick('bgm', $event)" /></label>
+            <label class="block" v-if="kind==='video'"><span class="text-ink-500 text-xs">视频号二维码（视频号助手 → 主页二维码，片尾和分享封面用）</span>
+              <input type="file" accept="image/*" class="mt-1 block w-full text-xs" @change="pick('channel_qr', $event)" /></label>
+            <label class="block" v-if="kind==='poster'"><span class="text-ink-500 text-xs">海报二维码（货袋子店铺码 / 视频号码）</span>
+              <input type="file" accept="image/*" class="mt-1 block w-full text-xs" @change="pick('qr', $event)" /></label>
+            <label class="block"><span class="text-ink-500 text-xs">头像（可选）</span>
+              <input type="file" accept="image/*" class="mt-1 block w-full text-xs" @change="pick('avatar', $event)" /></label>
+          </div>
+          <button class="btn btn-primary w-full mt-4" @click="submit" :disabled="submitting">
+            {{ submitting ? '上传中...' : (kind==='video' ? '生成视频号成片（约 1 分钟）' : '生成海报') }}
+          </button>
+          <div v-if="kind==='video'" class="text-xs text-ink-500 mt-3 leading-relaxed bg-slate-50 rounded-lg p-3">
+            <b class="text-ink-700">发布三步</b><br/>
+            1. 下载 video.mp4 与 cover.png，在视频号助手发布，封面选 cover.png，正文第一行放货袋子店铺链接<br/>
+            2. 把视频号卡片分享到群，用户点开就是视频，头像和主页都能跳到货袋子<br/>
+            3. 不方便发卡片的群，发 cover_share.png，长按二维码同样直达视频号
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card p-5">
+      <h2 class="font-medium mb-3">生成记录 <span class="text-xs text-ink-500 font-normal ml-2">服务重启后列表清空，文件保留在 data/media/</span></h2>
+      <div v-if="!jobs.length" class="text-sm text-ink-500">还没有生成过物料</div>
+      <div v-else class="space-y-3">
+        <div v-for="j in jobs" :key="j.id" class="border border-slate-100 rounded-xl p-4">
+          <div class="flex items-center justify-between text-sm">
+            <div class="flex items-center gap-3">
+              <span class="font-mono text-xs text-ink-500">{{ j.id }}</span>
+              <span class="tag">{{ j.kind === 'video' ? '视频' : '海报' }}</span>
+              <span class="tag">{{ j.theme }}</span>
+              <span v-if="j.has_video" class="tag">自传素材</span>
+              <span :class="['tag', j.status==='done' && 'bg-emerald-50 text-emerald-700', j.status==='failed' && 'bg-rose-50 text-rose-700']">{{ STATUS[j.status] }}</span>
+            </div>
+            <span class="text-xs text-ink-500">{{ fmtTime(j.created_at) }}</span>
+          </div>
+          <div v-if="j.status==='failed'" class="text-xs text-rose-600 mt-2">{{ j.error }}</div>
+          <div v-if="['queued','running'].includes(j.status)" class="text-xs text-ink-500 mt-2 font-mono">{{ j.logs.slice(-1)[0] || '等待中...' }}</div>
+          <div v-if="j.status==='done'" class="mt-3 flex flex-wrap gap-4 items-start">
+            <video v-if="j.files.video" :src="fileUrl(j, j.files.video)" controls class="h-64 rounded-lg bg-black"></video>
+            <template v-for="(name, key) in j.files" :key="key">
+              <a v-if="key !== 'video'" :href="fileUrl(j, name)" target="_blank" class="block">
+                <img :src="fileUrl(j, name)" class="h-64 rounded-lg border border-slate-200" />
+                <div class="text-xs text-center text-ink-500 mt-1">{{ name }}</div>
+              </a>
+            </template>
+            <div class="text-xs space-y-2">
+              <a v-for="(name, key) in j.files" :key="key" :href="fileUrl(j, name)" :download="name" class="btn btn-ghost block text-center">下载 {{ name }}</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`,
+};
+
+// ---------------------------------------------------------------------------
 // 主应用
 // ---------------------------------------------------------------------------
 const App = {
-  components: { Dashboard, Collect, Merchants, Templates, Campaigns, Records, Channel },
+  components: { Dashboard, Collect, Merchants, Templates, Campaigns, Records, Channel, Media },
   setup() {
     const current = ref(localStorage.getItem('hdz_page') || 'Dashboard');
     const health = ref({});
@@ -1432,6 +1680,7 @@ const App = {
       { key: 'Templates', name: '短信模板', icon: '✎' },
       { key: 'Campaigns', name: '触达活动', icon: '➤' },
       { key: 'Records', name: '触达记录', icon: '☰' },
+      { key: 'Media', name: '宣传物料', icon: '▶' },
       { key: 'Channel', name: '通道设置', icon: '⚙' },
     ];
     function go(key) {
